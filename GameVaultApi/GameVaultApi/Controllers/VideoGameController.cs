@@ -1,73 +1,103 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using GameVaultApi.Data;
 using GameVaultApi.Entities;
+using GameVaultApi.Models;
+using GameVaultApi.Services;
+using System.Security.Claims;
 
 namespace GameVaultApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class GameController(GameVaultDbContext context) : ControllerBase
+    [Authorize]
+    public class GameController(IGameService gameService) : ControllerBase
     {
-        private readonly GameVaultDbContext _context = context;
 
-        [HttpGet]
-        public async Task<ActionResult<List<Game>>> GetGames()
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<Game>>> GetAllGames()
         {
-            return Ok(await _context.Games.ToListAsync());
+            var games = await gameService.GetAllGamesAsync();
+            return Ok(games);
         }
-        [HttpGet]
-        [Route("{id:guid}")]
+
+        [HttpGet("my-games")]
+        public async Task<ActionResult<IEnumerable<Game>>> GetMyGames()
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized("Invalid user token.");
+            
+            var games = await gameService.GetUserGamesAsync(userId);
+            return Ok(games);
+        }
+        [HttpGet("{id:guid}")]
+        [AllowAnonymous]
         public async Task<ActionResult<Game>> GetGame(Guid id)
         {
-            var game = await _context.Games.FindAsync(id);
+            var game = await gameService.GetGameByIdAsync(id);
             if (game == null)
             {
-                return NotFound();
+                return NotFound("Game not found.");
             }
             return Ok(game);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Game>> AddGame(Game newGame)
+        public async Task<ActionResult<Game>> CreateGame(GameDto gameDto)
         {
-            if(newGame is null)
+            if(gameDto is null)
             {
                 return BadRequest("Game data is null.");
             }
-            _context.Games.Add(newGame);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetGame), new { id = newGame.Id }, newGame);
+            
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized("Invalid user token.");
+            
+            var game = await gameService.CreateGameAsync(gameDto, userId);
+            if (game == null)
+                return BadRequest("Failed to create game.");
+                
+            return CreatedAtAction(nameof(GetGame), new { id = game.Id }, game);
         }
-        [HttpPut("{id}")]
-        public async Task<ActionResult> UpdateGame(Guid id, Game updatedGame)
+        [HttpPut("{id:guid}")]
+        public async Task<ActionResult<Game>> UpdateGame(Guid id, GameDto gameDto)
         {
-            var game = await _context.Games.FindAsync(id);
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized("Invalid user token.");
+                
+            var game = await gameService.UpdateGameAsync(id, gameDto, userId);
             if (game == null)
             {
-                return NotFound();
+                return NotFound("Game not found or you don't have permission to update it.");
             }
-            game.Name = updatedGame.Name;
-            game.Platform = updatedGame.Platform;
-            game.ReleaseDate = updatedGame.ReleaseDate;
-            game.Publisher = updatedGame.Publisher;
-            game.Image = updatedGame.Image;
-            await _context.SaveChangesAsync();
-            return NoContent();
+            
+            return Ok(game);
         }
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
         public async Task<ActionResult> DeleteGame(Guid id)
         {
-            var game = await _context.Games.FindAsync(id);
-            if (game == null)
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized("Invalid user token.");
+                
+            var success = await gameService.DeleteGameAsync(id, userId);
+            if (!success)
             {
-                return NotFound();
+                return NotFound("Game not found or you don't have permission to delete it.");
             }
-             _context.Remove(game);
-            await _context.SaveChangesAsync();
+            
             return NoContent();
+        }
+        
+        private Guid GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Guid.Empty;
+            return userId;
         }
     }
 }

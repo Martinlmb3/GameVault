@@ -14,12 +14,23 @@ namespace GameVaultApi.Controllers
     {
 
         [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(UserDto request)
+        public async Task<ActionResult<RegisterResponseDto>> Register(UserDto request)
         {
-            var user = await authService.RegisterAsync(request);
-            if (user is null)
-                return BadRequest("Username already exists.");
-            return Ok(user);
+            var result = await authService.RegisterAsync(request);
+            if (result is null)
+                return BadRequest("Email already exists.");
+            
+            // Set refresh token as HttpOnly cookie for security
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Use HTTPS in production
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
+            
+            return Ok(result.RegisterResponse);
         }
         [Authorize]
         [HttpGet]
@@ -28,29 +39,85 @@ namespace GameVaultApi.Controllers
             return Ok("You are authenticated");
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("admin-only")]
-        public IActionResult AdminOnlyEndpoint()
-        {
-            return Ok("You are authenticated");
-        }
 
         [HttpPost("login")]
-        public async Task<ActionResult<TokenResponseDto>> Login(UserDto request)
+        public async Task<ActionResult<LoginResponseDto>> Login(UserDto request)
         {
             var result = await authService.LoginAsync(request);
             if (result is null)
-                return BadRequest("Invalid username or password.");
-
-            return Ok(result);
+                return BadRequest("Invalid email or password.");
+            
+            // Get user info for response
+            var user = await authService.GetUserByEmailAsync(request.Email);
+            if (user is null)
+                return BadRequest("User not found.");
+            
+            // Set refresh token as HttpOnly cookie for security
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Use HTTPS in production
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            Response.Cookies.Append("refreshToken", result.RefreshToken!, cookieOptions);
+            
+            var loginResponse = new LoginResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                AccessToken = result.AccessToken!
+            };
+            
+            return Ok(loginResponse);
         }
+        [Authorize]
         [HttpPost("refresh-token")]
-        public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
+        public async Task<ActionResult<LoginResponseDto>> RefreshToken()
         {
+            // Get refresh token from HttpOnly cookie
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized("Refresh token not found.");
+            
+            // Get user ID from current JWT token
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid user token.");
+            
+            var request = new RefreshTokenRequestDto
+            {
+                UserId = userId,
+                RefreshToken = refreshToken
+            };
+            
             var result = await authService.RefreshTokensAsync(request);
             if (result is null || result.AccessToken is null || result.RefreshToken is null)
                 return Unauthorized("Invalid refresh token.");
-            return Ok(result);
+            
+            // Get user info for response
+            var user = await authService.GetUserByIdAsync(userId);
+            if (user is null)
+                return Unauthorized("User not found.");
+            
+            // Update refresh token cookie
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
+            
+            var loginResponse = new LoginResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                AccessToken = result.AccessToken
+            };
+            
+            return Ok(loginResponse);
         }
     }
 }

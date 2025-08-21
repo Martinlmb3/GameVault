@@ -38,7 +38,7 @@ namespace GameVaultApi.Services
 
         public async Task<TokenResponseDto> LoginAsync(UserDto request)
         {
-            var user = await context.Users.FirstOrDefaultAsync(u => u.Email == request.email);
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user is null)
             {
                 return null;
@@ -60,19 +60,39 @@ namespace GameVaultApi.Services
             };
         }
 
-        public async Task<User?> RegisterAsync(UserDto request)
+        public async Task<RegisterResponseWithTokenDto?> RegisterAsync(UserDto request)
         {
-            if (await context.Users.AnyAsync(u => u.Email == request.email))
+            if (await context.Users.AnyAsync(u => u.Email == request.Email))
             {
                 return null;
             }
             var user = new User();
             var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
-            user.Email = request.email;
+            user.Username = request.Username;
+            user.Email = request.Email;
             user.PasswordHash = hashedPassword;
+            
+            // Generate and save refresh token
+            var refreshToken = GenerateRefreshToken();
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            
             context.Users.Add(user);
             await context.SaveChangesAsync();
-            return user;
+            
+            // Create response with access token and refresh token
+            var registerResponse = new RegisterResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                AccessToken = CreateToken(user)
+            };
+            
+            return new RegisterResponseWithTokenDto
+            {
+                RegisterResponse = registerResponse,
+                RefreshToken = refreshToken
+            };
         }
 
         private string GenerateRefreshToken()
@@ -108,6 +128,16 @@ namespace GameVaultApi.Services
             if (user is null)
                 return null;
             return await CreateTokenResponse(user);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<User?> GetUserByIdAsync(Guid userId)
+        {
+            return await context.Users.FindAsync(userId);
         }
     }
 

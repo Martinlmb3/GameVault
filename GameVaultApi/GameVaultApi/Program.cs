@@ -14,9 +14,9 @@ builder.Services.AddDbContext<GameVaultDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GameVaultDb"))
 );
 
-// Configuration JWT avec valeurs par défaut pour le développement
+// Configuration JWT avec valeurs par dï¿½faut pour le dï¿½veloppement
 var jwtSettings = builder.Configuration.GetSection("AppSettings");
-var secretKey = jwtSettings["Token"] ?? "ma-clé-secrète-de-développement-très-longue-et-sécurisée";
+var secretKey = jwtSettings["Token"] ?? "ma-clï¿½-secrï¿½te-de-dï¿½veloppement-trï¿½s-longue-et-sï¿½curisï¿½e";
 var issuer = jwtSettings["Issuer"] ?? "GameVaultApi";
 var audience = jwtSettings["Audience"] ?? "GameVaultClient";
 
@@ -36,6 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 var app = builder.Build();
