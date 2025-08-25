@@ -17,16 +17,22 @@ export default function MyGamesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPlatform, setSelectedPlatform] = useState("All Platforms")
   const [selectedGenre, setSelectedGenre] = useState("All Genres")
+  const [mounted, setMounted] = useState(false)
 
   const { data: games = [], isLoading, error } = useMyGamesQuery()
   const deleteGameMutation = useDeleteGameMutation()
 
+  // Ensure component is mounted before checking authentication
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (mounted && !isAuthenticated()) {
       router.push('/login')
     }
-  }, [router])
+  }, [router, mounted])
 
   const handleDeleteGame = async (gameId: string) => {
     if (confirm('Are you sure you want to delete this game?')) {
@@ -48,6 +54,21 @@ export default function MyGamesPage() {
 
     return matchesSearch && matchesPlatform && matchesGenre
   })
+
+  // Wait for component to mount before rendering
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white">
+        <GameVaultHeader />
+        <div className="container mx-auto px-6 py-8">
+          <div className="text-center py-12">
+            <p className="text-slate-400 text-lg">Loading...</p>
+          </div>
+        </div>
+        <GameVaultFooter />
+      </div>
+    )
+  }
 
   if (!isAuthenticated()) {
     return null // Will redirect
