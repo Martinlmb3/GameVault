@@ -4,6 +4,7 @@ using GameVaultApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GameVaultApi.Migrations
 {
     [DbContext(typeof(GameVaultDbContext))]
-    partial class GameVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250823111702_AddImageToUser")]
+    partial class AddImageToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,31 +128,6 @@ namespace GameVaultApi.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("GameVaultApi.Entities.Wishlist", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AddedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameId");
-
-                    b.HasIndex("UserId", "GameId")
-                        .IsUnique();
-
-                    b.ToTable("Wishlists");
-                });
-
             modelBuilder.Entity("GameVaultApi.Entities.Game", b =>
                 {
                     b.HasOne("GameVaultApi.Entities.User", "User")
@@ -178,25 +156,6 @@ namespace GameVaultApi.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Genre");
-                });
-
-            modelBuilder.Entity("GameVaultApi.Entities.Wishlist", b =>
-                {
-                    b.HasOne("GameVaultApi.Entities.Game", "Game")
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("GameVaultApi.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("GameVaultApi.Entities.Game", b =>

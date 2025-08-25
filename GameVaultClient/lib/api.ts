@@ -1,5 +1,3 @@
-const API_BASE_URL = 'http://localhost:5286/api';
-
 export interface LoginRequest {
   email: string;
   password: string;
@@ -15,6 +13,48 @@ export interface AuthResponse {
   id: string;
   username: string;
   accessToken: string;
+  image?: string;
+}
+
+export interface ProfileRequest {
+  username: string;
+  email: string;
+  image?: string;
+}
+
+export interface ProfileResponse {
+  id: string;
+  username: string;
+  email: string;
+  image?: string;
+}
+
+export interface GameRequest {
+  title: string;
+  publisher?: string;
+  platform?: string;
+  image?: string;
+  releaseDate?: string;
+  genres: string[];
+}
+
+export interface GameResponse {
+  id: string;
+  name: string;
+  publisher?: string;
+  platform?: string;
+  image?: string;
+  releaseDate?: string;
+  gameGenres?: Array<{
+    gameId: string;
+    game?: any;
+    genreId: string;
+    genre?: {
+      id: string;
+      name: string;
+      gameGenres?: any[];
+    };
+  }>;
 }
 
 export class ApiError extends Error {
@@ -28,11 +68,8 @@ export class ApiError extends Error {
 }
 
 class ApiClient {
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`;
     
     const config: RequestInit = {
       ...options,
@@ -81,7 +118,7 @@ class ApiClient {
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const token = localStorage.getItem('accessToken');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     return this.makeRequest<AuthResponse>('/auth/refresh-token', {
       method: 'POST',
       headers: {
@@ -91,10 +128,78 @@ class ApiClient {
   }
 
   async logout(): Promise<void> {
-    // Clear access token from localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
+    // Clear access token from localStorage (only on client side)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+    }
     // The HttpOnly cookie will be cleared by setting it with past expiration on server
+  }
+
+  async getProfile(): Promise<ProfileResponse> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<ProfileResponse>('/auth/profile', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
+
+  async updateProfile(data: ProfileRequest): Promise<ProfileResponse> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<ProfileResponse>('/auth/profile', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createGame(data: GameRequest): Promise<GameResponse> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<GameResponse>('/Game', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAllGames(): Promise<GameResponse[]> {
+    return this.makeRequest<GameResponse[]>('/Game/all');
+  }
+
+  async getMyGames(): Promise<GameResponse[]> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<GameResponse[]>('/Game/my-games', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
+
+  async updateGame(id: string, data: GameRequest): Promise<GameResponse> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<GameResponse>(`/Game/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGame(id: string): Promise<void> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.makeRequest<void>(`/Game/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
   }
 }
 
@@ -102,14 +207,22 @@ export const apiClient = new ApiClient();
 
 // Helper functions for token management
 export const setAuthData = (authResponse: AuthResponse) => {
-  localStorage.setItem('accessToken', authResponse.accessToken);
-  localStorage.setItem('user', JSON.stringify({
-    id: authResponse.id,
-    username: authResponse.username,
-  }));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('accessToken', authResponse.accessToken);
+    localStorage.setItem('user', JSON.stringify({
+      id: authResponse.id,
+      username: authResponse.username,
+      image: authResponse.image,
+    }));
+  }
 };
 
 export const getAuthData = () => {
+  // Check if we're on the client side
+  if (typeof window === 'undefined') {
+    return { token: null, user: null };
+  }
+  
   const token = localStorage.getItem('accessToken');
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
@@ -118,6 +231,11 @@ export const getAuthData = () => {
 };
 
 export const isAuthenticated = (): boolean => {
+  // Check if we're on the client side
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  
   const { token } = getAuthData();
   return !!token;
 };

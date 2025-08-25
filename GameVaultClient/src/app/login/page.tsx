@@ -1,12 +1,10 @@
 'use client'
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
-import { useState } from "react"
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
-import { apiClient, setAuthData } from "@/lib/api"
+import { useLoginMutation } from "@/lib/auth-queries"
 
 interface LoginFormData {
   email: string;
@@ -14,9 +12,7 @@ interface LoginFormData {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string>('');
+  const loginMutation = useLoginMutation()
   
   const {
     register,
@@ -24,21 +20,8 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormData>();
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setApiError('');
-
-    try {
-      const response = await apiClient.login(data);
-      setAuthData(response);
-      router.push('/my-games'); // Redirect to user's games page
-    } catch (error: unknown) {
-      setApiError(
-        (error as { message?: string })?.message || 'Login failed. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: LoginFormData) => {
+    loginMutation.mutate(data)
   };
 
   return (
@@ -50,9 +33,11 @@ export default function LoginPage() {
             <h1 className="text-2xl font-semibold text-white mb-2">Sign in to GameVault</h1>
           </div>
 
-          {apiError && (
+          {loginMutation.error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-              <p className="text-red-400 text-sm">{apiError}</p>
+              <p className="text-red-400 text-sm">
+                {(loginMutation.error as { message?: string })?.message || 'Login failed. Please try again.'}
+              </p>
             </div>
           )}
 
@@ -112,10 +97,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {loginMutation.isPending ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 

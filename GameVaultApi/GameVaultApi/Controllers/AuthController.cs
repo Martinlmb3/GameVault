@@ -14,7 +14,7 @@ namespace GameVaultApi.Controllers
     {
 
         [HttpPost("register")]
-        public async Task<ActionResult<RegisterResponseDto>> Register(UserDto request)
+        public async Task<ActionResult<RegisterResponseDto>> Register(RegisterDto request)
         {
             var result = await authService.RegisterAsync(request);
             if (result is null)
@@ -66,7 +66,8 @@ namespace GameVaultApi.Controllers
             {
                 Id = user.Id,
                 Username = user.Username,
-                AccessToken = result.AccessToken!
+                AccessToken = result.AccessToken!,
+                Image = user.Image
             };
             
             return Ok(loginResponse);
@@ -114,10 +115,43 @@ namespace GameVaultApi.Controllers
             {
                 Id = user.Id,
                 Username = user.Username,
-                AccessToken = result.AccessToken
+                AccessToken = result.AccessToken,
+                Image = user.Image
             };
             
             return Ok(loginResponse);
+        }
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<ActionResult<ProfileResponseDto>> GetProfile()
+        {
+            // Get user ID from current JWT token
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid user token.");
+
+            var profile = await authService.GetUserProfileAsync(userId);
+            if (profile is null)
+                return NotFound("User not found.");
+
+            return Ok(profile);
+        }
+
+        [Authorize]
+        [HttpPut("profile")]
+        public async Task<ActionResult<ProfileResponseDto>> UpdateProfile(ProfileDto request)
+        {
+            // Get user ID from current JWT token
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid user token.");
+
+            var updatedProfile = await authService.UpdateUserProfileAsync(userId, request);
+            if (updatedProfile is null)
+                return BadRequest("Failed to update profile. Email may already be in use.");
+
+            return Ok(updatedProfile);
         }
     }
 }

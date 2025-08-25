@@ -425,6 +425,8 @@ GameVaultApi/.ionide/
 
 # Fody - auto-generated XML schema
 GameVaultApi/FodyWeavers.xsd
+#Claude Permissions
+GameVaultApi/claude
 
 # ===============================================
 # GLOBAL PATTERNS (apply to both projects)

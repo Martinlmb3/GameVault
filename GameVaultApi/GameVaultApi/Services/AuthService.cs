@@ -60,7 +60,7 @@ namespace GameVaultApi.Services
             };
         }
 
-        public async Task<RegisterResponseWithTokenDto?> RegisterAsync(UserDto request)
+        public async Task<RegisterResponseWithTokenDto?> RegisterAsync(RegisterDto request)
         {
             if (await context.Users.AnyAsync(u => u.Email == request.Email))
             {
@@ -71,6 +71,7 @@ namespace GameVaultApi.Services
             user.Username = request.Username;
             user.Email = request.Email;
             user.PasswordHash = hashedPassword;
+            user.Image = "/logo.png"; // Default image for new users
             
             // Generate and save refresh token
             var refreshToken = GenerateRefreshToken();
@@ -85,7 +86,8 @@ namespace GameVaultApi.Services
             {
                 Id = user.Id,
                 Username = user.Username,
-                AccessToken = CreateToken(user)
+                AccessToken = CreateToken(user),
+                Image = user.Image
             };
             
             return new RegisterResponseWithTokenDto
@@ -138,6 +140,48 @@ namespace GameVaultApi.Services
         public async Task<User?> GetUserByIdAsync(Guid userId)
         {
             return await context.Users.FindAsync(userId);
+        }
+
+        public async Task<ProfileResponseDto?> GetUserProfileAsync(Guid userId)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user is null)
+                return null;
+
+            return new ProfileResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Image = user.Image
+            };
+        }
+
+        public async Task<ProfileResponseDto?> UpdateUserProfileAsync(Guid userId, ProfileDto request)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user is null)
+                return null;
+
+            // Check if email is already taken by another user
+            if (request.Email != user.Email && await context.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId))
+                return null;
+
+            // Update user properties
+            user.Username = request.Username;
+            user.Email = request.Email;
+            if (!string.IsNullOrEmpty(request.Image))
+                user.Image = request.Image;
+
+            await context.SaveChangesAsync();
+
+            return new ProfileResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Image = user.Image
+            };
         }
     }
 

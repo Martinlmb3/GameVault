@@ -21,8 +21,39 @@ namespace GameVaultApi.Services
             };
 
             context.Games.Add(game);
+
+            // Handle genres
+            if (gameDto.Genres != null && gameDto.Genres.Count > 0)
+            {
+                foreach (var genreName in gameDto.Genres)
+                {
+                    // Find or create genre
+                    var genre = await context.Genres.FirstOrDefaultAsync(g => g.Name == genreName);
+                    if (genre == null)
+                    {
+                        genre = new Genre
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = genreName
+                        };
+                        context.Genres.Add(genre);
+                        await context.SaveChangesAsync();
+                    }
+
+                    // Create the GameGenre relationship
+                    var gameGenre = new GameGenre
+                    {
+                        GameId = game.Id,
+                        GenreId = genre.Id
+                    };
+                    context.GameGenres.Add(gameGenre);
+                }
+            }
+
             await context.SaveChangesAsync();
-            return game;
+            
+            // Return the game with genres loaded
+            return await GetGameByIdAsync(game.Id);
         }
 
         public async Task<Game?> GetGameByIdAsync(Guid gameId)

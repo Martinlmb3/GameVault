@@ -1,53 +1,64 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { useCreateGameMutation } from "@/lib/auth-queries"
+import { GameRequest } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Upload } from "lucide-react"
+import { Calendar } from "lucide-react"
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
+import { useRouter } from "next/navigation"
+import { isAuthenticated } from "@/lib/api"
 
 export default function StoreGamePage() {
-  const [formData, setFormData] = useState({
-    gameName: "",
-    releaseDate: "",
-    publisher: "",
-    platform: "",
-    genre: "",
+  const router = useRouter()
+  const createGameMutation = useCreateGameMutation()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors }
+  } = useForm<GameRequest>({
+    defaultValues: {
+      title: "",
+      publisher: "",
+      platform: "",
+      image: "",
+      releaseDate: "",
+      genres: []
+    }
   })
-  const [dragActive, setDragActive] = useState(false)
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/login')
+    }
+  }, [router])
+
+
+  const onSubmit = async (data: GameRequest) => {
+    try {
+      // Convert single genre to array for API compatibility
+      const gameData = {
+        ...data,
+        genres: data.genres.length > 0 ? data.genres : []
+      }
+      await createGameMutation.mutateAsync(gameData)
+    } catch (error) {
+      console.error('Failed to create game:', error)
     }
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      // Handle file upload logic here
-      console.log("File dropped:", e.dataTransfer.files[0])
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Form submitted:", formData)
+  if (!isAuthenticated()) {
+    return null 
   }
 
   return (
@@ -57,20 +68,28 @@ export default function StoreGamePage() {
         <div className="max-w-2xl mx-auto">
           <h1 className="text-3xl font-bold text-white mb-8">Add New Game</h1>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Game Name */}
             <div className="space-y-2">
-              <Label htmlFor="gameName" className="text-white font-medium">
+              <Label htmlFor="title" className="text-white font-medium">
                 Game Name
               </Label>
               <Input
-                id="gameName"
+                id="title"
                 type="text"
                 placeholder="Enter game title"
-                value={formData.gameName}
-                onChange={(e) => handleInputChange("gameName", e.target.value)}
+                {...register('title', {
+                  required: 'Game title is required',
+                  minLength: {
+                    value: 2,
+                    message: 'Game title must be at least 2 characters'
+                  }
+                })}
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
               />
+              {errors.title && (
+                <p className="text-red-400 text-sm">{errors.title.message}</p>
+              )}
             </div>
 
             {/* Release Date */}
@@ -83,12 +102,14 @@ export default function StoreGamePage() {
                   id="releaseDate"
                   type="date"
                   placeholder="Select date"
-                  value={formData.releaseDate}
-                  onChange={(e) => handleInputChange("releaseDate", e.target.value)}
+                  {...register('releaseDate')}
                   className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
                 <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               </div>
+              {errors.releaseDate && (
+                <p className="text-red-400 text-sm">{errors.releaseDate.message}</p>
+              )}
             </div>
 
             {/* Publisher */}
@@ -100,102 +121,135 @@ export default function StoreGamePage() {
                 id="publisher"
                 type="text"
                 placeholder="Enter publisher name"
-                value={formData.publisher}
-                onChange={(e) => handleInputChange("publisher", e.target.value)}
+                {...register('publisher')}
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
               />
+              {errors.publisher && (
+                <p className="text-red-400 text-sm">{errors.publisher.message}</p>
+              )}
             </div>
 
             {/* Platform */}
             <div className="space-y-2">
               <Label className="text-white font-medium">Platform</Label>
-              <Select value={formData.platform} onValueChange={(value) => handleInputChange("platform", value)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="pc" className="text-white hover:bg-slate-700">
-                    PC
-                  </SelectItem>
-                  <SelectItem value="playstation" className="text-white hover:bg-slate-700">
-                    PlayStation
-                  </SelectItem>
-                  <SelectItem value="xbox" className="text-white hover:bg-slate-700">
-                    Xbox
-                  </SelectItem>
-                  <SelectItem value="nintendo" className="text-white hover:bg-slate-700">
-                    Nintendo Switch
-                  </SelectItem>
-                  <SelectItem value="mobile" className="text-white hover:bg-slate-700">
-                    Mobile
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="platform"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="PC" className="text-white hover:bg-slate-700">
+                        PC
+                      </SelectItem>
+                      <SelectItem value="PlayStation" className="text-white hover:bg-slate-700">
+                        PlayStation
+                      </SelectItem>
+                      <SelectItem value="Xbox" className="text-white hover:bg-slate-700">
+                        Xbox
+                      </SelectItem>
+                      <SelectItem value="Nintendo Switch" className="text-white hover:bg-slate-700">
+                        Nintendo Switch
+                      </SelectItem>
+                      <SelectItem value="Mobile" className="text-white hover:bg-slate-700">
+                        Mobile
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.platform && (
+                <p className="text-red-400 text-sm">{errors.platform.message}</p>
+              )}
             </div>
 
             {/* Genre */}
             <div className="space-y-2">
               <Label className="text-white font-medium">Genre</Label>
-              <Select value={formData.genre} onValueChange={(value) => handleInputChange("genre", value)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="action" className="text-white hover:bg-slate-700">
-                    Action
-                  </SelectItem>
-                  <SelectItem value="adventure" className="text-white hover:bg-slate-700">
-                    Adventure
-                  </SelectItem>
-                  <SelectItem value="rpg" className="text-white hover:bg-slate-700">
-                    RPG
-                  </SelectItem>
-                  <SelectItem value="strategy" className="text-white hover:bg-slate-700">
-                    Strategy
-                  </SelectItem>
-                  <SelectItem value="sports" className="text-white hover:bg-slate-700">
-                    Sports
-                  </SelectItem>
-                  <SelectItem value="racing" className="text-white hover:bg-slate-700">
-                    Racing
-                  </SelectItem>
-                  <SelectItem value="puzzle" className="text-white hover:bg-slate-700">
-                    Puzzle
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="genres"
+                control={control}
+                render={({ field }) => (
+                  <Select 
+                    value={field.value?.[0] || ""} 
+                    onValueChange={(value) => field.onChange([value])}
+                  >
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Select genre" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="Action" className="text-white hover:bg-slate-700">
+                        Action
+                      </SelectItem>
+                      <SelectItem value="Adventure" className="text-white hover:bg-slate-700">
+                        Adventure
+                      </SelectItem>
+                      <SelectItem value="RPG" className="text-white hover:bg-slate-700">
+                        RPG
+                      </SelectItem>
+                      <SelectItem value="Strategy" className="text-white hover:bg-slate-700">
+                        Strategy
+                      </SelectItem>
+                      <SelectItem value="Sports" className="text-white hover:bg-slate-700">
+                        Sports
+                      </SelectItem>
+                      <SelectItem value="Racing" className="text-white hover:bg-slate-700">
+                        Racing
+                      </SelectItem>
+                      <SelectItem value="Puzzle" className="text-white hover:bg-slate-700">
+                        Puzzle
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.genres && (
+                <p className="text-red-400 text-sm">{errors.genres.message}</p>
+              )}
             </div>
 
-            {/* Upload Game Image */}
+            {/* Image URL Input */}
             <div className="space-y-2">
-              <Label className="text-white font-medium">Upload Game Image</Label>
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragActive ? "border-blue-500 bg-blue-500/10" : "border-slate-600 hover:border-slate-500"
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >
-                <Upload className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-                <p className="text-slate-300 mb-4">Drag and drop or click to upload</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
-                >
-                  Browse Files
-                </Button>
-              </div>
+              <Label htmlFor="image" className="text-white font-medium">Game Image URL</Label>
+              <Input
+                id="image"
+                type="url"
+                placeholder="https://example.com/game-image.jpg"
+                {...register('image')}
+                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
+              />
+              {errors.image && (
+                <p className="text-red-400 text-sm">{errors.image.message}</p>
+              )}
             </div>
+
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2">
-                Add Game
+            <div className="flex justify-end gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push('/my-games')}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800 px-8 py-2"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createGameMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+              >
+                {createGameMutation.isPending ? 'Adding Game...' : 'Add Game'}
               </Button>
             </div>
+
+            {createGameMutation.error && (
+              <div className="text-red-400 text-sm mt-4">
+                Failed to add game. {createGameMutation.error.message}
+              </div>
+            )}
           </form>
         </div>
       </div>

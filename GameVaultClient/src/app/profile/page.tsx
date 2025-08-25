@@ -1,3 +1,11 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useProfileQuery, useUpdateProfileMutation } from '@/lib/auth-queries'
+import { ProfileRequest } from '@/lib/api'
+import { isAuthenticated } from '@/lib/api'
+import { useRouter } from 'next/navigation'
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +17,92 @@ import { Calendar, GamepadIcon, Trophy } from "lucide-react"
 import Image from 'next/image'
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const { data: profile, isLoading, error } = useProfileQuery()
+  const updateProfileMutation = useUpdateProfileMutation()
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty }
+  } = useForm<ProfileRequest>()
+
+  // Ensure component is mounted before checking authentication
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (mounted && !isAuthenticated()) {
+      router.push('/login')
+    }
+  }, [router, mounted])
+
+  // Reset form when profile data loads
+  useEffect(() => {
+    if (profile) {
+      reset({
+        username: profile.username,
+        email: profile.email,
+        image: profile.image || ''
+      })
+    }
+  }, [profile, reset])
+
+  const onSubmit = async (data: ProfileRequest) => {
+    try {
+      await updateProfileMutation.mutateAsync(data)
+      // Reset the form to mark it as not dirty
+      reset(data)
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+    }
+  }
+
+  // Wait for component to mount before rendering
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <GameVaultHeader />
+        <div className="pt-20 flex items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+        <GameVaultFooter />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated()) {
+    return null // Will redirect
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <GameVaultHeader />
+        <div className="pt-20 flex items-center justify-center">
+          <div className="text-white">Loading profile...</div>
+        </div>
+        <GameVaultFooter />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <GameVaultHeader />
+        <div className="pt-20 flex items-center justify-center">
+          <div className="text-red-400">Error loading profile: {error.message}</div>
+        </div>
+        <GameVaultFooter />
+      </div>
+    )
+  }
+
   const platformStats = [
     { name: "PlayStation", count: 45, percentage: 30 },
     { name: "Xbox", count: 38, percentage: 25 },
@@ -39,9 +133,15 @@ export default function ProfilePage() {
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader className="text-center pb-4">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-slate-700">
-                    <Image src="/professional-woman-avatar.png" alt="Profile" width={200} height={200} className="w-full h-full object-cover" />
+                    <Image 
+                      src={profile?.image || "/profile.jpeg"} 
+                      alt="Profile" 
+                      width={200} 
+                      height={200} 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
-                  <CardTitle className="text-white text-xl">Sophia Rodriguez</CardTitle>
+                  <CardTitle className="text-white text-xl">{profile?.username || 'Loading...'}</CardTitle>
                   <div className="flex items-center justify-center gap-2 text-slate-400 text-sm">
                     <Calendar className="w-4 h-4" />
                     <span>Joined 2020</span>
@@ -79,43 +179,87 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="text-white">Edit Profile</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent>
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-white text-sm font-medium">Username</label>
+                        <Input
+                          {...register('username', {
+                            required: 'Username is required',
+                            minLength: {
+                              value: 3,
+                              message: 'Username must be at least 3 characters'
+                            }
+                          })}
+                          className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                        />
+                        {errors.username && (
+                          <p className="text-red-400 text-sm">{errors.username.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-white text-sm font-medium">Email</label>
+                        <Input
+                          type="email"
+                          {...register('email', {
+                            required: 'Email is required',
+                            pattern: {
+                              value: /\S+@\S+\.\S+/,
+                              message: 'Email is invalid'
+                            }
+                          })}
+                          className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                        />
+                        {errors.email && (
+                          <p className="text-red-400 text-sm">{errors.email.message}</p>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <label className="text-white text-sm font-medium">Username</label>
+                      <label className="text-white text-sm font-medium">Profile Image URL</label>
                       <Input
-                        defaultValue="sophia_rodriguez"
+                        type="url"
+                        placeholder="https://example.com/avatar.jpg"
+                        {...register('image')}
                         className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
                       />
+                      {errors.image && (
+                        <p className="text-red-400 text-sm">{errors.image.message}</p>
+                      )}
                     </div>
+
                     <div className="space-y-2">
-                      <label className="text-white text-sm font-medium">Email</label>
-                      <Input
-                        defaultValue="sophia@example.com"
-                        type="email"
-                        className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                      <label className="text-white text-sm font-medium">Bio</label>
+                      <Textarea
+                        defaultValue="Passionate gamer who loves exploring new worlds and completing challenging achievements. Always looking for the next great adventure!"
+                        className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 min-h-[100px]"
+                        disabled
                       />
+                      <p className="text-slate-500 text-xs">Bio editing coming soon</p>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <label className="text-white text-sm font-medium">Bio</label>
-                    <Textarea
-                      defaultValue="Passionate gamer who loves exploring new worlds and completing challenging achievements. Always looking for the next great adventure!"
-                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 min-h-[100px]"
-                    />
-                  </div>
+                    <Button 
+                      type="submit"
+                      disabled={updateProfileMutation.isPending || !isDirty}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {updateProfileMutation.isPending ? 'Updating Profile...' : 'Update Profile'}
+                    </Button>
 
-                  <div className="space-y-2">
-                    <label className="text-white text-sm font-medium">Password</label>
-                    <Input
-                      type="password"
-                      placeholder="Enter new password"
-                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                    />
-                  </div>
+                    {updateProfileMutation.error && (
+                      <div className="text-red-400 text-sm mt-2">
+                        Failed to update profile. {updateProfileMutation.error.message}
+                      </div>
+                    )}
 
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">Update Profile</Button>
+                    {updateProfileMutation.isSuccess && !isDirty && (
+                      <div className="text-green-400 text-sm mt-2">
+                        Profile updated successfully!
+                      </div>
+                    )}
+                  </form>
                 </CardContent>
               </Card>
             </div>

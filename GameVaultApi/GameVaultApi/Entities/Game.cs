@@ -1,4 +1,5 @@
 ﻿using GameVaultApi.Entities;
+using System.Text.Json.Serialization;
 
 namespace GameVaultApi.Entities
 {
@@ -12,6 +13,7 @@ namespace GameVaultApi.Entities
     public DateTime ReleaseDate { get; set; }
 
     public Guid UserId { get; set; }
+    [JsonIgnore]
     public User User { get; set; } = null!;
 
     public ICollection<GameGenre> GameGenres { get; set; } = new List<GameGenre>();

@@ -1,85 +1,71 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Search, ChevronDown } from "lucide-react"
 import GameCard from "@/components/game-card"
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
-import { useMyGamesQuery, useDeleteGameMutation } from "@/lib/auth-queries"
-import { isAuthenticated } from "@/lib/api"
-import { useRouter } from "next/navigation"
 
-const platforms = ["All Platforms", "PC", "PlayStation", "Xbox", "Nintendo Switch", "Mobile"]
-const genres = ["All Genres", "Action", "Adventure", "RPG", "Strategy", "Sports", "Racing", "Puzzle"]
+const games = [
+  {
+    id: "1",
+    name: "Cyberpunk 2077",
+    platform: "PC",
+    genres: ["Action RPG"],
+    image: "/cyberpunk-2077-inspired-cover.png",
+  },
+  {
+    id: "2",
+    name: "The Witcher 3: Wild Hunt",
+    platform: "PC",
+    genres: ["Action RPG"],
+    image: "/witcher-3-inspired-cover.png",
+  },
+  {
+    id: "3",
+    name: "Red Dead Redemption 2",
+    platform: "PlayStation 4",
+    genres: ["Action-Adventure"],
+    image: "/generic-western-game-cover.png",
+  },
+  {
+    id: "4",
+    name: "Grand Theft Auto V",
+    platform: "PlayStation 4",
+    genres: ["Action-Adventure"],
+    image: "/generic-city-cover.png",
+  },
+  {
+    id: "5",
+    name: "Assassin's Creed Valhalla",
+    platform: "Xbox Series X",
+    genres: ["Action RPG"],
+    image: "/assassins-creed-valhalla-cover.png",
+  },
+  {
+    id: "6",
+    name: "God of War",
+    platform: "PlayStation 5",
+    genres: ["Action-Adventure"],
+    image: "/god-of-war-inspired-cover.png",
+  },
+]
+
+const platforms = ["All Platforms", "PC", "PlayStation 4", "PlayStation 5", "Xbox Series X", "Nintendo Switch"]
+const genres = ["All Genres", "Action RPG", "Action-Adventure", "FPS", "Strategy", "Sports"]
 
 export default function MyGamesPage() {
-  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPlatform, setSelectedPlatform] = useState("All Platforms")
   const [selectedGenre, setSelectedGenre] = useState("All Genres")
 
-  const { data: games = [], isLoading, error } = useMyGamesQuery()
-  const deleteGameMutation = useDeleteGameMutation()
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-    }
-  }, [router])
-
-  const handleDeleteGame = async (gameId: string) => {
-    if (confirm('Are you sure you want to delete this game?')) {
-      try {
-        await deleteGameMutation.mutateAsync(gameId)
-      } catch (error) {
-        console.error('Failed to delete game:', error)
-      }
-    }
-  }
-
   const filteredGames = games.filter((game) => {
     const matchesSearch = game.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesPlatform = selectedPlatform === "All Platforms" || game.platform === selectedPlatform
-    
-    // Handle gameGenres structure from API
-    const gameGenres = game.gameGenres?.map(gg => gg.genre?.name).filter(Boolean) || []
-    const matchesGenre = selectedGenre === "All Genres" || gameGenres.includes(selectedGenre)
+    const matchesGenre = selectedGenre === "All Genres" || (game.genres && game.genres.includes(selectedGenre))
 
     return matchesSearch && matchesPlatform && matchesGenre
   })
-
-  if (!isAuthenticated()) {
-    return null // Will redirect
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white">
-        <GameVaultHeader />
-        <div className="container mx-auto px-6 py-8">
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-lg">Loading your games...</p>
-          </div>
-        </div>
-        <GameVaultFooter />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-white">
-        <GameVaultHeader />
-        <div className="container mx-auto px-6 py-8">
-          <div className="text-center py-12">
-            <p className="text-red-400 text-lg">Failed to load games. Please try again.</p>
-          </div>
-        </div>
-        <GameVaultFooter />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
@@ -139,12 +125,7 @@ export default function MyGamesPage() {
         {/* Games Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredGames.map((game) => (
-            <GameCard 
-              key={game.id} 
-              game={game} 
-              onDelete={handleDeleteGame}
-              isDeleting={deleteGameMutation.isPending}
-            />
+            <GameCard key={game.id} game={game} />
           ))}
         </div>
 

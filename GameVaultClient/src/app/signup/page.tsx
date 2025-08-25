@@ -1,12 +1,10 @@
 'use client'
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
-import { useState } from "react"
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
-import { apiClient, setAuthData } from "@/lib/api"
+import { useSignupMutation } from "@/lib/auth-queries"
 
 interface SignupFormData {
   username: string;
@@ -16,9 +14,7 @@ interface SignupFormData {
 }
 
 export default function SignUpPage() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string>('');
+  const signupMutation = useSignupMutation()
   
   const {
     register,
@@ -29,22 +25,9 @@ export default function SignUpPage() {
 
   const watchPassword = watch("password");
 
-  const onSubmit = async (data: SignupFormData) => {
-    setIsLoading(true);
-    setApiError('');
-
-    try {
-      const { confirmPassword: _, ...signupData } = data;
-      const response = await apiClient.signup(signupData);
-      setAuthData(response);
-      router.push('/my-games'); // Redirect to user's games page
-    } catch (error: unknown) {
-      setApiError(
-        (error as { message?: string })?.message || 'Signup failed. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: SignupFormData) => {
+    const { confirmPassword: _, ...signupData } = data;
+    signupMutation.mutate(signupData)
   };
 
   return (
@@ -56,9 +39,11 @@ export default function SignUpPage() {
             <h1 className="text-2xl font-semibold text-white mb-2">Create your GameVault account</h1>
           </div>
 
-          {apiError && (
+          {signupMutation.error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg">
-              <p className="text-red-400 text-sm">{apiError}</p>
+              <p className="text-red-400 text-sm">
+                {(signupMutation.error as { message?: string })?.message || 'Signup failed. Please try again.'}
+              </p>
             </div>
           )}
 
@@ -171,10 +156,10 @@ export default function SignUpPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={signupMutation.isPending}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
             >
-              {isLoading ? 'Creating Account...' : 'Sign Up'}
+              {signupMutation.isPending ? 'Creating Account...' : 'Sign Up'}
             </button>
           </form>
 

@@ -44,9 +44,9 @@ namespace GameVaultApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Game>> CreateGame(GameDto gameDto)
+        public async Task<ActionResult<Game>> CreateGame(CreateGameDto createGameDto)
         {
-            if(gameDto is null)
+            if(createGameDto is null)
             {
                 return BadRequest("Game data is null.");
             }
@@ -54,6 +54,17 @@ namespace GameVaultApi.Controllers
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
                 return Unauthorized("Invalid user token.");
+            
+            // Convert CreateGameDto to GameDto (without ID)
+            var gameDto = new GameDto
+            {
+                Title = createGameDto.Title,
+                Publisher = createGameDto.Publisher,
+                Platform = createGameDto.Platform,
+                Image = createGameDto.Image,
+                ReleaseDate = createGameDto.ReleaseDate,
+                Genres = createGameDto.Genres
+            };
             
             var game = await gameService.CreateGameAsync(gameDto, userId);
             if (game == null)
