@@ -1,49 +1,50 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, ChevronDown } from "lucide-react"
 import GameCard from "@/components/game-card"
 import GameVaultHeader from "@/components/game-vault-header"
 import { GameVaultFooter } from "@/components/game-vault-footer"
+import { apiClient, GameResponse } from "@/lib/api"
 
-const games = [
+const hardcodedGames = [
   {
-    id: "1",
+    id: "hardcoded-1",
     name: "Cyberpunk 2077",
     platform: "PC",
     genres: ["Action RPG"],
     image: "/cyberpunk-2077-inspired-cover.png",
   },
   {
-    id: "2",
+    id: "hardcoded-2",
     name: "The Witcher 3: Wild Hunt",
     platform: "PC",
     genres: ["Action RPG"],
     image: "/witcher-3-inspired-cover.png",
   },
   {
-    id: "3",
+    id: "hardcoded-3",
     name: "Red Dead Redemption 2",
     platform: "PlayStation 4",
     genres: ["Action-Adventure"],
     image: "/generic-western-game-cover.png",
   },
   {
-    id: "4",
+    id: "hardcoded-4",
     name: "Grand Theft Auto V",
     platform: "PlayStation 4",
     genres: ["Action-Adventure"],
     image: "/generic-city-cover.png",
   },
   {
-    id: "5",
+    id: "hardcoded-5",
     name: "Assassin's Creed Valhalla",
     platform: "Xbox Series X",
     genres: ["Action RPG"],
     image: "/assassins-creed-valhalla-cover.png",
   },
   {
-    id: "6",
+    id: "hardcoded-6",
     name: "God of War",
     platform: "PlayStation 5",
     genres: ["Action-Adventure"],
@@ -58,8 +59,38 @@ export default function MyGamesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPlatform, setSelectedPlatform] = useState("All Platforms")
   const [selectedGenre, setSelectedGenre] = useState("All Genres")
+  const [fetchedGames, setFetchedGames] = useState<GameResponse[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredGames = games.filter((game) => {
+  useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        const games = await apiClient.getAllGames()
+        setFetchedGames(games)
+      } catch (error) {
+        console.error("Failed to fetch games:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchGames()
+  }, [])
+
+  const normalizeGame = (game: GameResponse) => ({
+    id: game.id,
+    name: game.name,
+    platform: game.platform || "Unknown",
+    genres: game.gameGenres?.map(gg => gg.genre?.name).filter(Boolean) || [],
+    image: game.image || "/placeholder-game.png",
+  })
+
+  const allGames = [
+    ...hardcodedGames,
+    ...fetchedGames.map(normalizeGame)
+  ]
+
+  const filteredGames = allGames.filter((game) => {
     const matchesSearch = game.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesPlatform = selectedPlatform === "All Platforms" || game.platform === selectedPlatform
     const matchesGenre = selectedGenre === "All Genres" || (game.genres && game.genres.includes(selectedGenre))
@@ -72,7 +103,7 @@ export default function MyGamesPage() {
       <GameVaultHeader />
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
-        <h1 className="text-3xl font-bold mb-8">My Games</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center">The Vault</h1>
 
         {/* Search and Filters */}
         <div className="mb-8 space-y-4">
@@ -122,15 +153,24 @@ export default function MyGamesPage() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <p className="text-slate-400 text-lg">Loading games...</p>
+          </div>
+        )}
+
         {/* Games Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {filteredGames.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-        </div>
+        {!loading && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filteredGames.map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))}
+          </div>
+        )}
 
         {/* No Results */}
-        {filteredGames.length === 0 && (
+        {!loading && filteredGames.length === 0 && (
           <div className="text-center py-12">
             <p className="text-slate-400 text-lg">No games found matching your criteria.</p>
           </div>

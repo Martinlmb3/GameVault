@@ -73,7 +73,7 @@ class ApiClient {
     
     const config: RequestInit = {
       ...options,
-      credentials: 'include', // Important for HttpOnly cookies
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -128,12 +128,10 @@ class ApiClient {
   }
 
   async logout(): Promise<void> {
-    // Clear access token from localStorage (only on client side)
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
     }
-    // The HttpOnly cookie will be cleared by setting it with past expiration on server
   }
 
   async getProfile(): Promise<ProfileResponse> {
@@ -205,7 +203,6 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 
-// Helper functions for token management
 export const setAuthData = (authResponse: AuthResponse) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('accessToken', authResponse.accessToken);
@@ -218,7 +215,6 @@ export const setAuthData = (authResponse: AuthResponse) => {
 };
 
 export const getAuthData = () => {
-  // Check if we're on the client side
   if (typeof window === 'undefined') {
     return { token: null, user: null };
   }
@@ -231,7 +227,6 @@ export const getAuthData = () => {
 };
 
 export const isAuthenticated = (): boolean => {
-  // Check if we're on the client side
   if (typeof window === 'undefined') {
     return false;
   }

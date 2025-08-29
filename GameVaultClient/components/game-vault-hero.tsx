@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import Link from 'next/link'
 
 export function GameVaultHero() {
   return (
@@ -27,16 +28,22 @@ export function GameVaultHero() {
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 text-lg">
-                    Add Game
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 text-lg"
-                  >
-                    View Library
-                  </Button>
+                  <Link href="">
+                    <Button
+                      size="lg" 
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 text-lg">
+                      Add Game
+                    </Button>
+                  </Link>
+                  <Link href="/games">
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 text-lg"
+                    >
+                      View Library
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

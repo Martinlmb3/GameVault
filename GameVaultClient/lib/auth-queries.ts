@@ -83,8 +83,6 @@ export const useLogoutMutation = () => {
     onSuccess: () => {
       // Clear all cached data
       queryClient.clear()
-      
-      // Redirect to home page
       router.push('/')
     },
     onError: (error) => {

@@ -27,7 +27,6 @@ export default function MyGamesPage() {
     setMounted(true)
   }, [])
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (mounted && !isAuthenticated()) {
       router.push('/login')
@@ -71,7 +70,7 @@ export default function MyGamesPage() {
   }
 
   if (!isAuthenticated()) {
-    return null // Will redirect
+    return null 
   }
 
   if (isLoading) {
@@ -107,7 +106,7 @@ export default function MyGamesPage() {
       <GameVaultHeader />
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
-        <h1 className="text-3xl font-bold mb-8">My Games</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center">My Games</h1>
 
         {/* Search and Filters */}
         <div className="mb-8 space-y-4">

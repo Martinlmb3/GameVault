@@ -55,7 +55,7 @@ export default function GameVaultHeader() {
           {/* Logo and brand */}
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image
-              src="/logo.png"
+              src="/Depth 3, Frame 2.png"
               width={120}
               height={40}
               alt="Game Vault Logo"
