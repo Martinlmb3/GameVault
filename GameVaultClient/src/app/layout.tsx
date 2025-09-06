@@ -14,9 +14,9 @@ export const metadata: Metadata = {
   title: "Game Vault",
   description: "Your game management platform",
   icons: {
-    icon: "/Depth 3, Frame 2.png",
-    shortcut: "/Depth 3, Frame 2.png",
-    apple: "/Depth 3, Frame 2.png",
+    icon: "/GameVault-Logo.svg",
+    shortcut: "/GameVault-Logo.svg",
+    apple: "/GameVault-Logo.svg",
   },
 }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { useCreateGameMutation } from "@/lib/auth-queries"
 import { GameRequest } from "@/lib/api"
@@ -18,6 +18,8 @@ import { isAuthenticated } from "@/lib/api"
 export default function StoreGamePage() {
   const router = useRouter()
   const createGameMutation = useCreateGameMutation()
+  const [isLoading, setIsLoading] = useState(true)
+  const [authenticated, setAuthenticated] = useState(false)
 
   const {
     register,
@@ -35,14 +37,20 @@ export default function StoreGamePage() {
     }
   })
 
-
-  // Redirect if not authenticated
+  // Check authentication on client side only
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
+    const checkAuth = () => {
+      const authStatus = isAuthenticated()
+      setAuthenticated(authStatus)
+      setIsLoading(false)
+      
+      if (!authStatus) {
+        router.push('/login')
+      }
     }
+    
+    checkAuth()
   }, [router])
-
 
   const onSubmit = async (data: GameRequest) => {
     try {
@@ -57,7 +65,15 @@ export default function StoreGamePage() {
     }
   }
 
-  if (!isAuthenticated()) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!authenticated) {
     return null 
   }
 

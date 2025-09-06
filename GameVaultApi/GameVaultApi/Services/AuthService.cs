@@ -153,7 +153,8 @@ namespace GameVaultApi.Services
                 Id = user.Id,
                 Username = user.Username,
                 Email = user.Email,
-                Image = user.Image
+                Image = user.Image,
+                CreateAt = user.CreateAt
             };
         }
 
@@ -180,7 +181,8 @@ namespace GameVaultApi.Services
                 Id = user.Id,
                 Username = user.Username,
                 Email = user.Email,
-                Image = user.Image
+                Image = user.Image,
+                CreateAt = user.CreateAt
             };
         }
     }

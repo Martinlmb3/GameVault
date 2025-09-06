@@ -27,6 +27,7 @@ export interface ProfileResponse {
   username: string;
   email: string;
   image?: string;
+  createAt?: string;
 }
 
 export interface GameRequest {

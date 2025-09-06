@@ -33,14 +33,13 @@ export default function GameVaultHeader() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Image
-                src="/logo.png"
-                width={120}
-                height={40}
+                src="/GameVault-Logo.svg"
+                width={250}
+                height={250}
                 alt="Game Vault Logo"
-                className="w-8 h-8 object-contain"
+                className="w-12 h-12 object-contain"
                 priority
               />
-              <span className="text-xl font-bold text-white">Game Vault</span>
             </Link>
             <div className="w-32 h-10"></div>
           </div>
@@ -55,11 +54,11 @@ export default function GameVaultHeader() {
           {/* Logo and brand */}
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image
-              src="/Depth 3, Frame 2.png"
-              width={120}
-              height={40}
+              src="/GameVault-Logo.svg"
+              width={150}
+              height={150}
               alt="Game Vault Logo"
-              className="w-8 h-8 object-contain"
+              className="w-12 h-12 object-contain"
               priority
             />
             <span className="text-xl font-bold text-white">Game Vault</span>
@@ -90,7 +89,7 @@ export default function GameVaultHeader() {
                       width={32}
                       height={32}
                       alt={`${user.username}'s avatar`}
-                      className="w-8 h-8 rounded-full object-cover border border-slate-600"
+                      className="w-10 h-10 rounded-full object-cover border border-slate-600"
                     />
                   </Link>
                   <span className="text-white text-sm">Hello, {user.username}</span>

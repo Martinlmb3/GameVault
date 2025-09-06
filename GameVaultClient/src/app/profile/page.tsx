@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useProfileQuery, useUpdateProfileMutation } from '@/lib/auth-queries'
+import { useProfileQuery, useUpdateProfileMutation, useMyGamesQuery } from '@/lib/auth-queries'
 import { ProfileRequest } from '@/lib/api'
 import { isAuthenticated } from '@/lib/api'
 import { useRouter } from 'next/navigation'
@@ -20,6 +20,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const { data: profile, isLoading, error } = useProfileQuery()
+  const { data: myGames, isLoading: gamesLoading } = useMyGamesQuery()
   const updateProfileMutation = useUpdateProfileMutation()
 
   const {
@@ -103,21 +104,54 @@ export default function ProfilePage() {
     )
   }
 
-  const platformStats = [
-    { name: "PlayStation", count: 45, percentage: 30 },
-    { name: "Xbox", count: 38, percentage: 25 },
-    { name: "PC", count: 52, percentage: 35 },
-    { name: "Nintendo", count: 15, percentage: 10 },
-  ]
+  // Calculate platform stats from user's games
+  const calculatePlatformStats = () => {
+    if (!myGames || myGames.length === 0) return []
+    
+    const platformCounts: Record<string, number> = {}
+    myGames.forEach(game => {
+      const platform = game.platform || 'Unknown'
+      platformCounts[platform] = (platformCounts[platform] || 0) + 1
+    })
+    
+    const total = myGames.length
+    return Object.entries(platformCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: Math.round((count / total) * 100)
+      }))
+      .sort((a, b) => b.count - a.count)
+  }
 
-  const genreStats = [
-    { name: "Action", count: 35, percentage: 23 },
-    { name: "RPG", count: 42, percentage: 28 },
-    { name: "Strategy", count: 28, percentage: 19 },
-    { name: "Puzzle", count: 18, percentage: 12 },
-    { name: "Sports", count: 12, percentage: 8 },
-    { name: "Racing", count: 15, percentage: 10 },
-  ]
+  // Calculate genre stats from user's games
+  const calculateGenreStats = () => {
+    if (!myGames || myGames.length === 0) return []
+    
+    const genreCounts: Record<string, number> = {}
+    myGames.forEach(game => {
+      if (game.gameGenres && game.gameGenres.length > 0) {
+        game.gameGenres.forEach(gameGenre => {
+          if (gameGenre.genre && gameGenre.genre.name) {
+            const genreName = gameGenre.genre.name
+            genreCounts[genreName] = (genreCounts[genreName] || 0) + 1
+          }
+        })
+      }
+    })
+    
+    const totalGenres = Object.values(genreCounts).reduce((sum, count) => sum + count, 0)
+    return Object.entries(genreCounts)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: totalGenres > 0 ? Math.round((count / totalGenres) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+  }
+
+  const platformStats = calculatePlatformStats()
+  const genreStats = calculateGenreStats()
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -144,13 +178,13 @@ export default function ProfilePage() {
                   <CardTitle className="text-white text-xl">{profile?.username || 'Loading...'}</CardTitle>
                   <div className="flex items-center justify-center gap-2 text-slate-400 text-sm">
                     <Calendar className="w-4 h-4" />
-                    <span>Joined 2020</span>
+                    <span>Joined {profile?.createAt ? new Date(profile.createAt).getFullYear() : 'N/A'}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div className="bg-slate-700 rounded-lg p-3">
-                      <div className="text-2xl font-bold text-blue-400">150</div>
+                      <div className="text-2xl font-bold text-blue-400">{myGames?.length || 0}</div>
                       <div className="text-slate-400 text-sm">Total Games</div>
                     </div>
                     <div className="bg-slate-700 rounded-lg p-3">
@@ -276,20 +310,26 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {platformStats.map((platform) => (
-                  <div key={platform.name} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">{platform.name}</span>
-                      <span className="text-slate-400">{platform.count} games</span>
+                {gamesLoading ? (
+                  <div className="text-slate-400 text-center py-4">Loading platform data...</div>
+                ) : platformStats.length > 0 ? (
+                  platformStats.map((platform) => (
+                    <div key={platform.name} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-300">{platform.name}</span>
+                        <span className="text-slate-400">{platform.count} games</span>
+                      </div>
+                      <div className="w-full bg-slate-700 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${platform.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${platform.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-slate-400 text-center py-4">No games added yet</div>
+                )}
               </CardContent>
             </Card>
 
@@ -302,20 +342,26 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {genreStats.map((genre) => (
-                  <div key={genre.name} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">{genre.name}</span>
-                      <span className="text-slate-400">{genre.count} games</span>
+                {gamesLoading ? (
+                  <div className="text-slate-400 text-center py-4">Loading genre data...</div>
+                ) : genreStats.length > 0 ? (
+                  genreStats.map((genre) => (
+                    <div key={genre.name} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-300">{genre.name}</span>
+                        <span className="text-slate-400">{genre.count} games</span>
+                      </div>
+                      <div className="w-full bg-slate-700 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${genre.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${genre.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-slate-400 text-center py-4">No games with genres added yet</div>
+                )}
               </CardContent>
             </Card>
           </div>

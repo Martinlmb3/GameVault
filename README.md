@@ -1,5 +1,4 @@
-# 🎮 GameVault
-
+![GameVault Logo](./GameVaultClient/public/GameVault-Logo.svg)
 ## 📖 Description
 
 GameVault est une application web moderne qui permet aux passionnés de jeux vidéo de créer et gérer leur collection personnelle de titres de jeux en ligne. Organisez votre bibliothèque ludique, découvrez de nouveaux jeux et gardez une trace de vos aventures gaming !
