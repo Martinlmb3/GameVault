@@ -26,7 +26,8 @@ export default function SignUpPage() {
   const watchPassword = watch("password");
 
   const onSubmit = (data: SignupFormData) => {
-    const { confirmPassword: _, ...signupData } = data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword, ...signupData } = data;
     signupMutation.mutate(signupData)
   };
 

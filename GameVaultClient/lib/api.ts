@@ -39,6 +39,17 @@ export interface GameRequest {
   genres: string[];
 }
 
+export interface GameGenre {
+  gameId: string;
+  game?: GameResponse;
+  genreId: string;
+  genre?: {
+    id: string;
+    name: string;
+    gameGenres?: GameGenre[];
+  };
+}
+
 export interface GameResponse {
   id: string;
   name: string;
@@ -46,16 +57,7 @@ export interface GameResponse {
   platform?: string;
   image?: string;
   releaseDate?: string;
-  gameGenres?: Array<{
-    gameId: string;
-    game?: any;
-    genreId: string;
-    genre?: {
-      id: string;
-      name: string;
-      gameGenres?: any[];
-    };
-  }>;
+  gameGenres?: GameGenre[];
 }
 
 export class ApiError extends Error {

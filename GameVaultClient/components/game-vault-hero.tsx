@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function GameVaultHero() {
   return (
@@ -10,9 +11,11 @@ export function GameVaultHero() {
           <div className="bg-slate-200 rounded-2xl p-8 md:p-16 relative">
             {/* Controller image */}
             <div className="flex justify-center mb-8">
-              <img
+              <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qY9r9Ypk6C3Ko3oxNBq5Cov0VAar03.png"
                 alt="Gaming Controller"
+                width={256}
+                height={256}
                 className="w-64 h-auto object-contain"
               />
             </div>
