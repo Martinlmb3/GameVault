@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export function GameVaultFooter() {
   return (
@@ -7,7 +8,16 @@ export function GameVaultFooter() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-white font-semibold text-lg">Game Vault</h3>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/GameVault-Logo.svg"
+                alt="Game Vault Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8"
+              />
+              <h3 className="text-white font-semibold text-lg">Game Vault</h3>
+            </div>
             <p className="text-slate-400 text-sm">
               Your ultimate game collection hub. Organize, track, and manage your entire video game library
               effortlessly.
