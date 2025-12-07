@@ -153,5 +153,21 @@ namespace GameVaultApi.Controllers
 
             return Ok(updatedProfile);
         }
+
+        [Authorize]
+        [HttpPatch("profile")]
+        public async Task<ActionResult<ProfileResponseDto>> UpdateProfilePartial(UpdateProfileDto request)
+        {
+            // Get user ID from current JWT token
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized("Invalid user token.");
+
+            var updatedProfile = await authService.UpdateUserProfilePatchAsync(userId, request);
+            if (updatedProfile is null)
+                return BadRequest("Failed to update profile. Email may already be in use.");
+
+            return Ok(updatedProfile);
+        }
     }
 }

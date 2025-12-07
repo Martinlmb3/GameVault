@@ -13,5 +13,6 @@ namespace GameVaultApi.Services
         Task<User?> GetUserByIdAsync(Guid userId);
         Task<ProfileResponseDto?> GetUserProfileAsync(Guid userId);
         Task<ProfileResponseDto?> UpdateUserProfileAsync(Guid userId, ProfileDto request);
+        Task<ProfileResponseDto?> UpdateUserProfilePatchAsync(Guid userId, UpdateProfileDto request);
     }
 }

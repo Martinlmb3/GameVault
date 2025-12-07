@@ -154,6 +154,7 @@ namespace GameVaultApi.Services
                 Username = user.Username,
                 Email = user.Email,
                 Image = user.Image,
+                Bio = user.Bio,
                 CreateAt = user.CreateAt
             };
         }
@@ -182,6 +183,54 @@ namespace GameVaultApi.Services
                 Username = user.Username,
                 Email = user.Email,
                 Image = user.Image,
+                Bio = user.Bio,
+                CreateAt = user.CreateAt
+            };
+        }
+
+        public async Task<ProfileResponseDto?> UpdateUserProfilePatchAsync(Guid userId, UpdateProfileDto request)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user is null)
+                return null;
+
+            // Update email if provided and not empty
+            if (!string.IsNullOrEmpty(request.Email))
+            {
+                // Check if email is already taken by another user
+                if (request.Email != user.Email && await context.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId))
+                    return null;
+
+                user.Email = request.Email;
+            }
+
+            // Update username if provided and not empty
+            if (!string.IsNullOrEmpty(request.Username))
+            {
+                user.Username = request.Username;
+            }
+
+            // Update image if provided (can be empty string to clear it)
+            if (request.Image is not null)
+            {
+                user.Image = request.Image;
+            }
+
+            // Update bio if provided (can be empty string to clear it)
+            if (request.Bio is not null)
+            {
+                user.Bio = request.Bio;
+            }
+
+            await context.SaveChangesAsync();
+
+            return new ProfileResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Image = user.Image,
+                Bio = user.Bio,
                 CreateAt = user.CreateAt
             };
         }

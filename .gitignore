@@ -435,3 +435,7 @@ GameVaultApi/claude
 # Global misc files
 .DS_Store
 *.pem
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
