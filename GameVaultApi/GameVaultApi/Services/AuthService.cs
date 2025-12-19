@@ -72,15 +72,15 @@ namespace GameVaultApi.Services
             user.Email = request.Email;
             user.PasswordHash = hashedPassword;
             user.Image = "/logo.png"; // Default image for new users
-            
+
             // Generate and save refresh token
             var refreshToken = GenerateRefreshToken();
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            
+
             context.Users.Add(user);
             await context.SaveChangesAsync();
-            
+
             // Create response with access token and refresh token
             var registerResponse = new RegisterResponseDto
             {
@@ -89,7 +89,7 @@ namespace GameVaultApi.Services
                 AccessToken = CreateToken(user),
                 Image = user.Image
             };
-            
+
             return new RegisterResponseWithTokenDto
             {
                 RegisterResponse = registerResponse,
@@ -165,11 +165,9 @@ namespace GameVaultApi.Services
             if (user is null)
                 return null;
 
-            // Check if email is already taken by another user
             if (request.Email != user.Email && await context.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId))
                 return null;
 
-            // Update user properties
             user.Username = request.Username;
             user.Email = request.Email;
             if (!string.IsNullOrEmpty(request.Image))
@@ -194,7 +192,6 @@ namespace GameVaultApi.Services
             if (user is null)
                 return null;
 
-            // Update email if provided and not empty
             if (!string.IsNullOrEmpty(request.Email))
             {
                 // Check if email is already taken by another user
