@@ -1,3 +1,5 @@
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -62,7 +64,7 @@ export interface GameResponse {
 
 export class ApiError extends Error {
   status: number;
-  
+
   constructor(data: { message: string; status: number }) {
     super(data.message);
     this.name = 'ApiError';
@@ -71,63 +73,66 @@ export class ApiError extends Error {
 }
 
 class ApiClient {
-  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`;
-    
-    const config: RequestInit = {
-      ...options,
-      credentials: 'include',
+  private axiosInstance: AxiosInstance;
+
+  constructor() {
+    // Create Axios instance with default configuration
+    this.axiosInstance = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
       },
-    };
+      withCredentials: true, // Send cookies with requests (for refresh token)
+    });
 
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new ApiError({
-          message: errorText || `HTTP error! status: ${response.status}`,
-          status: response.status,
-        });
+    // Response interceptor for error handling
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError) => {
+        if (error.response) {
+          // Server responded with error status
+          throw new ApiError({
+            message: (error.response.data as any)?.message || error.message || `HTTP error! status: ${error.response.status}`,
+            status: error.response.status,
+          });
+        } else if (error.request) {
+          // Request made but no response received
+          throw new ApiError({
+            message: 'Network error or server is unreachable',
+            status: 0,
+          });
+        } else {
+          // Something else happened
+          throw new ApiError({
+            message: error.message || 'An unexpected error occurred',
+            status: 0,
+          });
+        }
       }
+    );
+  }
 
-      return await response.json();
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      throw new ApiError({
-        message: 'Network error or server is unreachable',
-        status: 0,
-      });
-    }
+  private getAuthHeaders(): Record<string, string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    return this.makeRequest<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await this.axiosInstance.post<AuthResponse>('/auth/login', data);
+    return response.data;
   }
 
   async signup(data: SignupRequest): Promise<AuthResponse> {
-    return this.makeRequest<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await this.axiosInstance.post<AuthResponse>('/auth/register', data);
+    return response.data;
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<AuthResponse>('/auth/refresh-token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await this.axiosInstance.post<AuthResponse>('/auth/refresh-token', {}, {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async logout(): Promise<void> {
@@ -138,68 +143,48 @@ class ApiClient {
   }
 
   async getProfile(): Promise<ProfileResponse> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<ProfileResponse>('/auth/profile', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await this.axiosInstance.get<ProfileResponse>('/auth/profile', {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async updateProfile(data: ProfileRequest): Promise<ProfileResponse> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<ProfileResponse>('/auth/profile', {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+    const response = await this.axiosInstance.put<ProfileResponse>('/auth/profile', data, {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async createGame(data: GameRequest): Promise<GameResponse> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<GameResponse>('/Game', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+    const response = await this.axiosInstance.post<GameResponse>('/Game', data, {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async getAllGames(): Promise<GameResponse[]> {
-    return this.makeRequest<GameResponse[]>('/Game/all');
+    const response = await this.axiosInstance.get<GameResponse[]>('/Game/all');
+    return response.data;
   }
 
   async getMyGames(): Promise<GameResponse[]> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<GameResponse[]>('/Game/my-games', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await this.axiosInstance.get<GameResponse[]>('/Game/my-games', {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async updateGame(id: string, data: GameRequest): Promise<GameResponse> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<GameResponse>(`/Game/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+    const response = await this.axiosInstance.put<GameResponse>(`/Game/${id}`, data, {
+      headers: this.getAuthHeaders(),
     });
+    return response.data;
   }
 
   async deleteGame(id: string): Promise<void> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    return this.makeRequest<void>(`/Game/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+    await this.axiosInstance.delete<void>(`/Game/${id}`, {
+      headers: this.getAuthHeaders(),
     });
   }
 }
@@ -221,11 +206,11 @@ export const getAuthData = () => {
   if (typeof window === 'undefined') {
     return { token: null, user: null };
   }
-  
+
   const token = localStorage.getItem('accessToken');
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  
+
   return { token, user };
 };
 
@@ -233,7 +218,18 @@ export const isAuthenticated = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
   }
-  
+
   const { token } = getAuthData();
   return !!token;
+};
+
+// Export error handler helper
+export const handleAxiosError = (error: unknown): string => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || error.message;
+  }
+  return 'An unexpected error occurred';
 };
